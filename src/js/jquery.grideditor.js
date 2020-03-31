@@ -7,9 +7,9 @@ $.fn.gridEditor = function( options ) {
 
     var self = this;
     var grideditor = self.data('grideditor');
-    
+
     /** Methods **/
-    
+
     if (arguments[0] == 'getHtml') {
         if (grideditor) {
             grideditor.deinit();
@@ -20,20 +20,20 @@ $.fn.gridEditor = function( options ) {
             return self.html();
         }
     }
-    
+
     if (arguments[0] == 'remove') {
         if (grideditor) {
             grideditor.remove();
         }
         return;
-    } 
-    
+    }
+
     /** Initialize plugin */
 
     self.each(function(baseIndex, baseElem) {
         baseElem = $(baseElem);
 
-        var settings = $.extend({
+        var settings = $.extend(true, {
             'new_row_layouts'   : [ // Column layouts for add row buttons
                                     [12],
                                     [6, 6],
@@ -44,8 +44,8 @@ $.fn.gridEditor = function( options ) {
                                     [4, 8],
                                     [8, 4]
                                 ],
-            'row_classes'       : [{ label: 'Example class', cssClass: 'example-class'}],
-            'col_classes'       : [{ label: 'Example class', cssClass: 'example-class'}],
+            'row_classes'       : [], /* Example: { label: 'Example class', cssClass: 'example-class'} */
+            'col_classes'       : [], /* Example: { label: 'Example class', cssClass: 'example-class'} */
             'col_tools'         : [], /* Example:
                                         [ {
                                             title: 'Set background image',
@@ -57,7 +57,44 @@ $.fn.gridEditor = function( options ) {
             'custom_filter'     : '',
             'content_types'     : ['tinymce'],
             'valid_col_sizes'   : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            'source_textarea'   : ''
+            'source_textarea'   : '',
+            'i18n'				: {
+            	'layouts'		: {
+            		'xl'		: 'Large desktop',
+            		'lg'		: 'Desktop',
+                    'md'		: 'Tablet',
+                    'sm'		: 'Phone, landscape',
+                    'xs'		: 'Phone, portrait'
+            	},
+            	'buttons'		: {
+            		'html'		: 'Edit Source Code',
+            		'preview'	: 'Preview'
+            	},
+            	'tools'			: {
+            		'move'		: 'Move',
+            		'settings'	: 'Settings',
+        			'setId'		: 'Set a unique identifier',
+        			'toggleClass'	: 'Toggle {0} styling',
+            		'row'		: {
+            			'add'		: 'Add row',
+            			'remove'	: 'Remove row',
+            			'confirm'	: 'Delete row?'
+            		},
+            		'col'		: {
+            			'add'		: 'Add column',
+            			'remove'	: 'Remove col',
+            			'confirm'	: 'Delete column?'
+            		},
+            		'size'		: {
+            			'decrease'	: 'Make column narrower\n(hold shift for min)',
+            			'increase'	: 'Make column wider\n(hold shift for max)'
+            		},
+            		'offset'	: {
+            			'decrease'	: 'Decrease column offset\n(hold shift for min)',
+            			'increase'	: 'Increase column offset\n(hold shift for max)'
+            		}
+            	}
+            }
         }, options);
 
 
@@ -68,10 +105,11 @@ $.fn.gridEditor = function( options ) {
             addRowGroup,
             htmlTextArea
         ;
-        var colClasses = ['col-lg-', 'col-sm-', 'col-'];
-        var curColClassIndex = 0; // Index of the column class we are manipulating currently
+        var colClasses = ['col-xl-', 'col-lg-', 'col-md-', 'col-sm-', 'col-'];
+        var offsetClasses = ['offset-xl-', 'offset-lg-', 'offset-md-', 'offset-sm-', 'offset-'];
+        var curColClassIndex = 1; // Index of the column class we are manipulating currently
         var MAX_COL_SIZE = 12;
-        
+
         // Copy html to sourceElement if a source textarea is given
         if (settings.source_textarea) {
             var sourceHtml = $(settings.source_textarea).val();
@@ -80,15 +118,15 @@ $.fn.gridEditor = function( options ) {
                 var column = createColumn(12).appendTo(row);
                 column.find('.ge-content').html(sourceHtml);
                 sourceHtml = column.html();
-            } 
+            }
             baseElem.html(sourceHtml);
         }
-        
+
         // Wrap content if it is non-bootstrap
         if (baseElem.children().length && !baseElem.find('div.row').length) {
             var children = baseElem.children();
-            var newRow = $('<div class="row"><div class="col-lg-12"/></div>').appendTo(baseElem);
-            newRow.find('.col-lg-12').append(children);
+            var newRow = $('<div class="row"><div class="col-12" /></div>').appendTo(baseElem);
+            newRow.find('.col-12').append(children);
         }
 
         setup();
@@ -97,8 +135,8 @@ $.fn.gridEditor = function( options ) {
         function setup() {
             /* Setup canvas */
             canvas = baseElem.addClass('ge-canvas');
-            
-            htmlTextArea = $('<textarea class="ge-html-output"/>').insertBefore(canvas);
+
+            htmlTextArea = $('<textarea class="ge-html-output" />').insertBefore(canvas);
 
             /* Create main controls*/
             mainControls = $('<div class="ge-mainControls" />').insertBefore(htmlTextArea);
@@ -108,7 +146,7 @@ $.fn.gridEditor = function( options ) {
             addRowGroup = $('<div class="ge-addRowGroup btn-group" />').appendTo(wrapper);
             $.each(settings.new_row_layouts, function(j, layout) {
                 var btn = $('<a class="btn btn-sm btn-primary" />')
-                    .attr('title', 'Add row ' + layout.join('-'))
+                    .attr('title', settings.i18n.tools.row.add + ' ' + layout.join('-'))
                     .on('click', function() {
                         var row = createRow().appendTo(canvas);
                         layout.forEach(function(i) {
@@ -120,7 +158,7 @@ $.fn.gridEditor = function( options ) {
                     .appendTo(addRowGroup)
                 ;
 
-                btn.append('<i class="fa fa-plus"></i>');
+                btn.append('<i class="fas fa-plus fa-fw"></i>');
 
                 var layoutName = layout.join(' - ');
                 var icon = '<div class="row ge-row-icon">';
@@ -133,11 +171,13 @@ $.fn.gridEditor = function( options ) {
 
             // Buttons on right
             var layoutDropdown = $('<div class="dropdown pull-right ge-layout-mode">' +
-                '<button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown">Desktop</button>' +
+                '<button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown">' + settings.i18n.layouts.lg + '</button>' +
                     '<div class="dropdown-menu" role="menu">' +
-                        '<a class="dropdown-item" data-width="auto" title="Desktop">Desktop</a>'+
-                        '<a class="dropdown-item" title="Tablet">Tablet'+
-                        '<a class="dropdown-item" title="Phone">Phone</a>'+
+                    	'<a class="dropdown-item" title="' + settings.i18n.layouts.xl + '">' + settings.i18n.layouts.xl + '</a>'+
+                        '<a class="dropdown-item" data-width="auto" title="' + settings.i18n.layouts.lg + '">' + settings.i18n.layouts.lg + '</a>'+
+                        '<a class="dropdown-item" title="' + settings.i18n.layouts.md + '">' + settings.i18n.layouts.md + '</a>'+
+                        '<a class="dropdown-item" title="' + settings.i18n.layouts.sm + '">' + settings.i18n.layouts.sm + '</a>'+
+                        '<a class="dropdown-item" title="' + settings.i18n.layouts.xs + '">' + settings.i18n.layouts.xs + '</a>'+
                     '</div>' +
                 '</div>')
                 .on('click', 'a', function() {
@@ -150,7 +190,7 @@ $.fn.gridEditor = function( options ) {
             var btnGroup = $('<div class="btn-group pull-right"/>')
                 .appendTo(wrapper)
             ;
-            var htmlButton = $('<button title="Edit Source Code" type="button" class="btn btn-sm btn-primary gm-edit-mode"><i class="fa fa-chevron-left"></i><i class="fa fa-chevron-right"></i></span></button>')
+            var htmlButton = $('<button title="' + settings.i18n.buttons.html + '" type="button" class="btn btn-sm btn-primary gm-edit-mode"><span class="fa-layers fa-fw"><i class="fas fa-chevron-left" data-fa-transform="left-6"></i><i class="fas fa-chevron-right" data-fa-transform="right-6"></i></span></button>')
                 .on('click', function() {
                     if (htmlButton.hasClass('active')) {
                         canvas.empty().html(htmlTextArea.val()).show();
@@ -170,7 +210,7 @@ $.fn.gridEditor = function( options ) {
                 })
                 .appendTo(btnGroup)
             ;
-            var previewButton = $('<button title="Preview" type="button" class="btn btn-sm btn-primary gm-preview"><i class="fa fa-eye"></i></button>')
+            var previewButton = $('<button title="' + settings.i18n.buttons.preview + '" type="button" class="btn btn-sm btn-primary gm-preview"><i class="fas fa-eye fa-fw"></i></button>')
                 .on('mouseenter', function() {
                     canvas.removeClass('ge-editing');
                 })
@@ -191,10 +231,10 @@ $.fn.gridEditor = function( options ) {
             /* Init RTE on click */
             canvas.on('click', '.ge-content', initRTE);
         }
-        
+
         function onScroll(e) {
             var $window = $(window);
-            
+
             if (
                 $window.scrollTop() > mainControls.offset().top &&
                 $window.scrollTop() < canvas.offset().top + canvas.height()
@@ -219,10 +259,10 @@ $.fn.gridEditor = function( options ) {
                 }
             }
         }
-        
+
         function initRTE(e) {
             if ($(this).hasClass('ge-rte-active')) { return; }
-            
+
             var rte = getRTE($(this).data('ge-content-type'));
             if (rte) {
                 $(this).addClass('ge-rte-active', true);
@@ -256,7 +296,7 @@ $.fn.gridEditor = function( options ) {
             removeSortable();
             runFilter(false);
         }
-        
+
         function remove() {
             deinit();
             mainControls.remove();
@@ -272,21 +312,21 @@ $.fn.gridEditor = function( options ) {
                 if (row.find('> .ge-tools-drawer').length) { return; }
 
                 var drawer = $('<div class="ge-tools-drawer" />').prependTo(row);
-                createTool(drawer, 'Move', 'ge-move', 'fa fa-arrows-alt');
-                createTool(drawer, 'Settings', '', 'fa fa-cog', function() {
+                createTool(drawer, settings.i18n.tools.move, 'ge-move', 'fas fa-expand-arrows-alt fa-fw');
+                createTool(drawer, settings.i18n.tools.settings, '', 'fas fa-cog fa-fw', function() {
                     details.toggle();
                 });
                 settings.row_tools.forEach(function(t) {
-                    createTool(drawer, t.title || '', t.className || '', t.iconClass || 'fa fa-wrench', t.on);
+                    createTool(drawer, t.title || '', t.className || '', t.iconClass || 'fas fa-wrench fa-fw', t.on);
                 });
-                createTool(drawer, 'Remove row', '', 'fa fa-trash-alt', function() {
-                    if (window.confirm('Delete row?')) {
+                createTool(drawer, settings.i18n.tools.row.remove, '', 'fas fa-trash-alt fa-fw', function() {
+                    if (window.confirm(settings.i18n.tools.row.confirm)) {
                         row.slideUp(function() {
                             row.remove();
                         });
                     }
                 });
-                createTool(drawer, 'Add column', 'ge-add-column', 'fa fa-plus-circle', function() {
+                createTool(drawer, settings.i18n.tools.col.add, 'ge-add-column', 'fas fa-plus-circle fa-fw', function() {
                     row.append(createColumn(3));
                     init();
                 });
@@ -302,9 +342,9 @@ $.fn.gridEditor = function( options ) {
 
                 var drawer = $('<div class="ge-tools-drawer" />').prependTo(col);
 
-                createTool(drawer, 'Move', 'ge-move', 'fa fa-arrows-alt');
+                createTool(drawer, settings.i18n.tools.move, 'ge-move', 'fas fa-expand-arrows-alt fa-fw');
 
-                createTool(drawer, 'Make column narrower\n(hold shift for min)', 'ge-decrease-col-width', 'fa fa-minus', function(e) {
+                createTool(drawer, settings.i18n.tools.size.decrease, 'ge-decrease-col-width', 'fas fa-minus fa-fw', function(e) {
                     var colSizes = settings.valid_col_sizes;
                     var curColClass = colClasses[curColClassIndex];
                     var curColSizeIndex = colSizes.indexOf(getColSize(col, curColClass));
@@ -315,28 +355,58 @@ $.fn.gridEditor = function( options ) {
                     setColSize(col, curColClass, Math.max(newSize, 1));
                 });
 
-                createTool(drawer, 'Make column wider\n(hold shift for max)', 'ge-increase-col-width', 'fa fa-plus', function(e) {
+                createTool(drawer, settings.i18n.tools.size.increase, 'ge-increase-col-width', 'fas fa-plus fa-fw', function(e) {
                     var colSizes = settings.valid_col_sizes;
                     var curColClass = colClasses[curColClassIndex];
                     var curColSizeIndex = colSizes.indexOf(getColSize(col, curColClass));
                     var newColSizeIndex = clamp(curColSizeIndex + 1, 0, colSizes.length - 1);
                     var newSize = colSizes[newColSizeIndex];
                     if (e.shiftKey) {
-                        newSize = getColSize(col) + getColumnSpare(col.parent());
+                        newSize = getColSize(col, curColClass) + getColumnSpare(col.parent());
                     }
                     setColSize(col, curColClass, Math.min(newSize, MAX_COL_SIZE));
                 });
 
-                createTool(drawer, 'Settings', '', 'fa fa-cog', function() {
-                    details.toggle();
-                });
-                
-                settings.col_tools.forEach(function(t) {
-                    createTool(drawer, t.title || '', t.className || '', t.iconClass || 'fa fa-wrench', t.on);
+                createTool(drawer, settings.i18n.tools.offset.decrease, 'ge-decrease-col-offset', 'fas fa-long-arrow-alt-left fa-fw', function(e) {
+                    var curColClass = colClasses[curColClassIndex];
+                    var curColSize = getColSize(col, curColClass);
+                    var curColOffsetClass = offsetClasses[curColClassIndex];
+                    var curColOffset = getColOffset(col, curColOffsetClass);
+                    var newOffset = curColOffset;
+                	if (curColSize > 0) {
+                		newOffset = curColOffset - 1;
+                        if (e.shiftKey) {
+                        	newOffset = 0;
+                        }
+                	}
+                	setColOffset(col, curColOffsetClass, Math.max(newOffset, 0));
                 });
 
-                createTool(drawer, 'Remove col', '', 'fa fa-trash-alt', function() {
-                    if (window.confirm('Delete column?')) {
+                createTool(drawer, settings.i18n.tools.offset.increase, 'ge-increase-col-offset', 'fas fa-long-arrow-alt-right fa-fw', function(e) {
+                    var curColClass = colClasses[curColClassIndex];
+                    var curColSize = getColSize(col, curColClass);
+                    var curColOffsetClass = offsetClasses[curColClassIndex];
+                    var curColOffset = getColOffset(col, curColOffsetClass);
+                    var newOffset = curColOffset;
+                	if (curColSize < MAX_COL_SIZE) {
+                		newOffset = curColOffset + 1;
+                        if (e.shiftKey) {
+                        	newOffset = getColumnSpare(col.parent());
+                        }
+                	}
+                    setColOffset(col, curColOffsetClass, Math.min(newOffset, MAX_COL_SIZE - 1));
+                });
+
+                createTool(drawer, settings.i18n.tools.settings, '', 'fas fa-cog fa-fw', function() {
+                    details.toggle();
+                });
+
+                settings.col_tools.forEach(function(t) {
+                    createTool(drawer, t.title || '', t.className || '', t.iconClass || 'fas fa-wrench fa-fw', t.on);
+                });
+
+                createTool(drawer, settings.i18n.tools.col.remove, '', 'fas fa-trash-alt fa-fw', function() {
+                    if (window.confirm(settings.i18n.tools.col.confirm)) {
                         col.animate({
                             opacity: 'hide',
                             width: 'hide',
@@ -347,7 +417,7 @@ $.fn.gridEditor = function( options ) {
                     }
                 });
 
-                createTool(drawer, 'Add row', 'ge-add-row', 'fa fa-plus-circle', function() {
+                createTool(drawer, settings.i18n.tools.row.add, 'ge-add-row', 'fas fa-plus-circle fa-fw', function() {
                     var row = createRow();
                     col.append(row);
                     row.append(createColumn(6)).append(createColumn(6));
@@ -366,7 +436,7 @@ $.fn.gridEditor = function( options ) {
             var layout = colClasses[curColClassIndex];
             var size = 0;
             row.find('> [class*="'+layout+'"]').each(function(){
-                size += getColSize($(this));
+                size += getColSize($(this), layout);
             });
             return size;
         }
@@ -391,7 +461,7 @@ $.fn.gridEditor = function( options ) {
             $('<input class="ge-id" />')
                 .attr('placeholder', 'id')
                 .val(container.attr('id'))
-                .attr('title', 'Set a unique identifier')
+                .attr('title', settings.i18n.tools.setId)
                 .appendTo(detailsDiv)
                 .change(function() {
                     container.attr('id', this.value);
@@ -402,7 +472,7 @@ $.fn.gridEditor = function( options ) {
             cssClasses.forEach(function(rowClass) {
                 var btn = $('<a class="btn btn-sm btn-default" />')
                     .html(rowClass.label)
-                    .attr('title', rowClass.title ? rowClass.title : 'Toggle "' + rowClass.label + '" styling')
+                    .attr('title', rowClass.title ? rowClass.title : format(settings.i18n.tools.toggleClass, [rowClass.label]))
                     .toggleClass('active btn-primary', container.hasClass(rowClass.cssClass))
                     .on('click', function() {
                         btn.toggleClass('active btn-primary');
@@ -475,6 +545,50 @@ $.fn.gridEditor = function( options ) {
                 col.switchClass(reResult[1], colClass + size, 50);
             } else {
                 col.addClass(colClass + size);
+            }
+        }
+
+        /**
+         * Return the column offset for offsetClass, or a size from a different
+         * class if it was not found.
+         * Returns 0 if no offset whatsoever was found.
+         */
+        function getColOffset(col, offsetClass) {
+            var sizes = getColOffsets(col);
+            for (var i = 0; i < sizes.length; i++) {
+                if (sizes[i].offsetClass == offsetClass) {
+                    return sizes[i].size;
+                }
+            }
+            if (sizes.length) {
+                return sizes[0].size;
+            }
+            return 0;
+        }
+
+        function getColOffsets(col) {
+            var result = [];
+            offsetClasses.forEach(function(offsetClass) {
+                var re = new RegExp(offsetClass + '(\\d+)', 'i');
+                if (re.test(col.attr('class'))) {
+                    result.push({
+                    	offsetClass: offsetClass,
+                        size: parseInt(re.exec(col.attr('class'))[1])
+                    });
+                }
+            });
+            return result;
+        }
+
+        function setColOffset(col, offsetClass, size) {
+            var re = new RegExp('(' + offsetClass + '(\\d+))', 'i');
+            var reResult = re.exec(col.attr('class'));
+            /* if (reResult && size === 0) {
+                col.removeClass(reResult[1]);
+            } else  */if (reResult && parseInt(reResult[2]) !== size) {
+                col.switchClass(reResult[1], offsetClass + size, 50);
+            } else {
+                col.addClass(offsetClass + size);
             }
         }
 
@@ -568,18 +682,25 @@ $.fn.gridEditor = function( options ) {
         function switchLayout(colClassIndex) {
             curColClassIndex = colClassIndex;
 
-            var layoutClasses = ['ge-layout-desktop', 'ge-layout-tablet', 'ge-layout-phone'];
+            var layoutClasses = ['ge-layout-desktop-xl', 'ge-layout-desktop', 'ge-layout-tablet', 'ge-layout-phone-l', 'ge-layout-phone'];
             layoutClasses.forEach(function(cssClass, i) {
                 canvas.toggleClass(cssClass, i == colClassIndex);
             });
         }
-        
+
         function getRTE(type) {
             return $.fn.gridEditor.RTEs[type];
         }
-        
+
         function clamp(input, min, max) {
             return Math.min(max, Math.max(min, input));
+        }
+
+        function format(source, params) {
+            $.each(params, function (i, n) {
+                source = source.replace(new RegExp("\\{" + i + "\\}", "g"), n);
+            })
+            return source;
         }
 
         baseElem.data('grideditor', {
