@@ -184,24 +184,29 @@
 /* Layout modes */
 
 // xs = ''
-.layoutMode(phone, col, col-sm, col-md, col-lg, col-xl, 400px);
-.layoutMode(tablet, col-sm, col, col-md, col-lg, col-xl, 800px);
-.layoutMode(desktop, col-lg, col, col-sm, col-md, col-xl, none);
+.layoutMode(phone, col, col-sm, col-md, col-lg, col-xl, offset, offset-sm, offset-md, offset-lg, offset-xl, 400px);
+.layoutMode(phone-l, col-sm, col, col-md, col-lg, col-xl, offset-sm, offset, offset-md, offset-lg, offset-xl, 600px);
+.layoutMode(tablet, col-md, col, col-sm, col-lg, col-xl, offset-md, offset, offset-sm, offset-lg, offset-xl, 800px);
+.layoutMode(desktop, col-lg, col, col-sm, col-md, col-xl, offset-lg, offset, offset-sm, offset-md, offset-xl, 1000px);
+.layoutMode(desktop-xl, col-xl, col, col-sm, col-md, col-lg, offset-xl, offset, offset-sm, offset-md, offset-lg, none);
 
-.layoutMode(@type, @e, @d1, @d2, @d3, @d4, @maxWidth) {
+.layoutMode(@type, @e, @d1, @d2, @d3, @d4, @f, @g1, @g2, @g3, @g4, @maxWidth) {
     .ge-canvas.ge-layout-@{type} {
         max-width: @maxWidth;
         margin-left: auto;
         margin-right: auto;
         .disable-columns(@d1, @d2, @d3, @d4);
         .generate-columns(@e);
+        .disable-offsets(@g1, @g2, @g3, @g4);
+        .generate-offsets(@f);
     }
 }
 
 .disable-columns(@d1, @d2, @d3, @d4, @i: 1) when (@i =< 12) {
   .@{d1}-@{i},
   .@{d2}-@{i},
-  .@{d3}-@{i} {
+  .@{d3}-@{i},
+  .@{d4}-@{i} {
     width: inherit;
   }
   .disable-columns(@d1, @d2, @d3, @d4, (@i + 1));
@@ -213,4 +218,21 @@
     max-width: @i * 8.33333333333%;
   }
   .generate-columns(@e, (@i + 1));
+}
+
+.disable-offsets(@g1, @g2, @g3, @g4, @i: 0) when (@i =< 11) {
+  .@{g1}-@{i},
+  .@{g2}-@{i},
+  .@{g3}-@{i},
+  .@{g4}-@{i} {
+    margin-left: inherit;
+  }
+  .disable-offsets(@g1, @g2, @g3, @g4, (@i + 1));
+}
+
+.generate-offsets(@f, @i: 0) when (@i =< 11) {
+  .@{f}-@{i} {
+    margin-left: @i * 8.33333333333%;
+  }
+  .generate-offsets(@f, (@i + 1));
 }
